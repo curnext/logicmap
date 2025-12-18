@@ -8,7 +8,7 @@ A beautiful, interactive visualization of the **Logistic Map**—the simple equa
 
 ## About
 
-**LogicMap** is an educational tool designed to make Chaos Theory intuitive and accessible. It visualizes the famous logistic equation:
+**LogicMap** is an educational tool designed to make Chaos Theory intuitive and accessible. It visualizes the famous [logistic map](https://en.wikipedia.org/wiki/Logistic_map) equation:
 
 $$x_{n+1} = r \cdot x_n \cdot (1 - x_n)$$
 
