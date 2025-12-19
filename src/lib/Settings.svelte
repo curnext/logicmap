@@ -63,6 +63,27 @@
             </div>
         </section>
 
+        <!-- Iterations Section (Moved from TimeSeriesPlot) -->
+        <section>
+            <div class="label-row">
+                <h3>Time Series Iterations</h3>
+                <span class="value-badge">{config.iterations}</span>
+            </div>
+            <div class="control-row">
+                <input
+                    type="range"
+                    min="10"
+                    max="500"
+                    step="1"
+                    bind:value={config.iterations}
+                />
+                <div class="range-labels">
+                    <span>10</span>
+                    <span>500</span>
+                </div>
+            </div>
+        </section>
+
         <!-- Toggles Section: Segmented Controls -->
         <section class="toggles-grid">
             <!-- Axes Toggle -->
@@ -91,6 +112,23 @@
                     <button
                         class:active={config.showLabels}
                         onclick={() => (config.showLabels = true)}>Show</button
+                    >
+                </div>
+            </div>
+
+            <!-- Time Series Toggle -->
+            <div class="toggle-group">
+                <h3>Time Series</h3>
+                <div class="segmented-control">
+                    <button
+                        class:active={!config.showTimeSeries}
+                        onclick={() => (config.showTimeSeries = false)}
+                        >Hide</button
+                    >
+                    <button
+                        class:active={config.showTimeSeries}
+                        onclick={() => (config.showTimeSeries = true)}
+                        >Show</button
                     >
                 </div>
             </div>

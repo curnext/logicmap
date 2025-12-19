@@ -10,6 +10,8 @@ export interface SimulationConfig {
     contrast: number;    // 0.5 to 2.0, brightness scaler
     showAxes: boolean;   // Toggle for axes lines/ticks
     showLabels: boolean; // Toggle for text labels
+    showTimeSeries: boolean; // Toggle for bottom time series plot
+    iterations: number;  // Number of iterations for time series (n)
     refreshTrigger?: number; // Force re-render
 }
 
@@ -25,5 +27,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     contrast: 2.0,
     showAxes: true,
     showLabels: false,
+    showTimeSeries: true,
+    iterations: 100,
     refreshTrigger: 0
 };

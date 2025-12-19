@@ -15,7 +15,12 @@
     let {
         view = $bindable(),
         config,
-    }: { view: MapView; config: SimulationConfig } = $props();
+        selectedR = null,
+    }: {
+        view: MapView;
+        config: SimulationConfig;
+        selectedR?: number | null;
+    } = $props();
 
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
@@ -50,7 +55,28 @@
         const rRange = view.rMax - view.rMin;
         const xRange = view.xMax - view.xMin;
 
+        // Draw Reference Line for selectedR (only when passed)
+        if (
+            selectedR !== null &&
+            selectedR >= view.rMin &&
+            selectedR <= view.rMax
+        ) {
+            const rx = ((selectedR - view.rMin) / rRange) * width;
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.5)"; // Sky blue with opacity
+            ctx.lineWidth = 1 * dpr;
+            ctx.setLineDash([4 * dpr, 4 * dpr]); // Dashed line
+            ctx.moveTo(rx, 0);
+            ctx.lineTo(rx, height);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         const rStep = nicerStep(rRange);
+        // Safety check for rStep
+        if (rStep <= 0) return;
+
         const rStart = Math.ceil(view.rMin / rStep) * rStep;
 
         ctx.beginPath();
@@ -80,6 +106,8 @@
 
         // Y Axis (Left, representing population x)
         const xStep = nicerStep(xRange);
+        if (xStep <= 0) return; // Safety
+
         const xStart = Math.ceil(view.xMin / xStep) * xStep;
 
         ctx.textAlign = "left";
@@ -115,6 +143,7 @@
     }
 
     function nicerStep(range: number) {
+        if (!range || range <= 0 || isNaN(range)) return 1; // Fallback
         const target = range / 8;
         const power = Math.floor(Math.log10(target));
         const base = Math.pow(10, power);
@@ -132,8 +161,10 @@
         return 0;
     }
 
+    let lastImageData: ImageData | null = null;
+
     $effect(() => {
-        // When view changes
+        // When view or config changes (expensive Render)
         const _ =
             view.rMin +
             view.rMax +
@@ -159,6 +190,19 @@
         }
     });
 
+    $effect(() => {
+        // When selectedR changes (cheap Redraw)
+        selectedR;
+        if (lastImageData && ctx) {
+            try {
+                ctx.putImageData(lastImageData, 0, 0);
+                drawAxes();
+            } catch (e) {
+                // Ignore mismatch errors
+            }
+        }
+    });
+
     function requestRender(mode: "drag" | "static") {
         if (!worker || width === 0 || height === 0) return;
 
@@ -174,11 +218,36 @@
         });
     }
 
+    /**
+     * Apply 1:1 aspect ratio to the view based on current canvas dimensions
+     * Keeps the R range (horizontal) fixed and adjusts X range (vertical) to match
+     */
+    function applyAspectRatio() {
+        if (width === 0 || height === 0) return;
+
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = width / dpr;
+        const cssHeight = height / dpr;
+
+        const rRange = view.rMax - view.rMin;
+        const unitsPerPixel = rRange / cssWidth;
+
+        // Calculate new X range to maintain 1:1 aspect ratio
+        const xCenter = (view.xMin + view.xMax) / 2;
+        const newXRange = unitsPerPixel * cssHeight;
+
+        view.xMin = xCenter - newXRange / 2;
+        view.xMax = xCenter + newXRange / 2;
+    }
+
     export function resetView() {
+        // Reset to default view
         Object.assign(view, DEFAULT_VIEW);
-        // Force resize calculation to re-apply aspect ratio based on the new (default) view
-        // effectively centering the default view while respecting window shape
-        resize();
+        // Apply 1:1 aspect ratio
+        applyAspectRatio();
+        // Clear cache and re-render
+        lastImageData = null;
+        requestRender("static");
     }
 
     // Touch State
@@ -243,8 +312,6 @@
             const newCenter = getTouchCenter(e.touches[0], e.touches[1]);
 
             // 1. Calculate Zoom Factor
-            // If newDist > touchDist, we are zooming IN (scale < 1)
-            // If newDist < touchDist, we are zooming OUT (scale > 1)
             const zoomFactor = touchDist / newDist;
 
             // 2. Pan due to center movement
@@ -256,8 +323,6 @@
 
             // Normalize center position (0 to 1) relative to canvas
             const rect = canvas.getBoundingClientRect();
-
-            // Simplified: Re-calculate view from scratch based on startView
 
             const finalRRange = rRange * zoomFactor;
             const finalXRange = xRange * zoomFactor;
@@ -302,44 +367,19 @@
         const newWidth = Math.floor(rect.width * dpr);
         const newHeight = Math.floor(rect.height * dpr);
 
-        // Logical (CSS) pixels for calculation
-        const cssWidth = rect.width;
-        const cssHeight = rect.height;
+        // Skip if no actual change (prevents infinite loops)
+        if (newWidth === width && newHeight === height && width > 0) return;
 
-        // Aspect Ratio Maintenance (1:1 pixel ratio)
-        if (width > 0 && height > 0) {
-            // Existing window: Maintain scale based on CSS width NOT physical width
-            const rRange = view.rMax - view.rMin;
-            const unitsPerPixel = rRange / (width / dpr); // Use previous logical width
-
-            const rCenter = (view.rMin + view.rMax) / 2;
-            const xCenter = (view.xMin + view.xMax) / 2;
-
-            const newRRange = unitsPerPixel * cssWidth;
-            const newXRange = unitsPerPixel * cssHeight;
-
-            view.rMin = rCenter - newRRange / 2;
-            view.rMax = rCenter + newRRange / 2;
-            view.xMin = xCenter - newXRange / 2;
-            view.xMax = xCenter + newXRange / 2;
-        } else {
-            // First load
-            const rRange = view.rMax - view.rMin;
-            const unitsPerPixel = rRange / cssWidth;
-
-            const xCenter = (view.xMin + view.xMax) / 2;
-            const newXRange = unitsPerPixel * cssHeight;
-
-            view.xMin = xCenter - newXRange / 2;
-            view.xMax = xCenter + newXRange / 2;
-        }
-
-        // Apply new dimensions
+        // Simply update canvas pixel dimensions to match container
+        // DO NOT modify view state here - let CSS control the layout
         width = newWidth;
         height = newHeight;
 
         canvas.width = width;
         canvas.height = height;
+
+        // Clear cached image data since dimensions changed
+        lastImageData = null;
 
         requestRender("drag");
     }
@@ -355,6 +395,7 @@
                     w,
                     h,
                 );
+                lastImageData = imageData; // Cache for cheap redraws
                 ctx.putImageData(imageData, 0, 0);
 
                 // Draw Axes on top
@@ -375,6 +416,9 @@
 
         // Initial sizing
         resize();
+
+        // Apply 1:1 aspect ratio on initial load
+        applyAspectRatio();
 
         // Prevent Safari Pinch-to-Zoom on Page
         const preventDefault = (e: Event) => e.preventDefault();

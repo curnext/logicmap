@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import GrowthRateSlider from "./GrowthRateSlider.svelte";
 
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
@@ -137,17 +138,7 @@
     <canvas bind:this={canvas}></canvas>
 
     <div class="controls">
-        <label for="r-slider"
-            >Growth Rate (r): <strong>{r.toFixed(2)}</strong></label
-        >
-        <input
-            id="r-slider"
-            type="range"
-            bind:value={r}
-            min="0"
-            max="4"
-            step="0.001"
-        />
+        <GrowthRateSlider bind:value={r} />
 
         <div class="presets">
             <button
@@ -265,20 +256,6 @@
         color: black;
         border-color: var(--accent);
         font-weight: bold;
-    }
-
-    label {
-        font-family: "Patrick Hand", cursive; /* Match usage */
-        font-size: 1.2rem;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    input[type="range"] {
-        width: 100%;
-        accent-color: #38bdf8;
-        cursor: pointer;
     }
 
     .explanation {
