@@ -49,22 +49,44 @@
         ctx.fillStyle = "#18181b"; // dark bg
         ctx.fillRect(0, 0, width, height);
 
-        // Grid lines (0 and 1)
+        // Dynamic Y-axis range based on r
+        const yMin = r < 0 ? -0.5 : 0;
+        const yMax = r < 0 ? 1.5 : 1;
+        const yRange = yMax - yMin;
+
+        // Grid lines
         ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
         ctx.lineWidth = 1;
 
-        const yScale = height;
-        // Draw 0 line (bottom)
+        // Draw bottom line
         ctx.beginPath();
-        ctx.moveTo(0, height - 1); // -1 to be visible
+        ctx.moveTo(0, height - 1);
         ctx.lineTo(width, height - 1);
         ctx.stroke();
 
-        // Draw 1 line (top)
+        // Draw top line
         ctx.beginPath();
         ctx.moveTo(0, 1);
         ctx.lineTo(width, 1);
         ctx.stroke();
+
+        // Draw 0 and 1 reference lines if in extended range
+        if (r < 0) {
+            // Draw y=0 line
+            const y0 = height - ((0 - yMin) / yRange) * height;
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.moveTo(0, y0);
+            ctx.lineTo(width, y0);
+            ctx.stroke();
+
+            // Draw y=1 line
+            const y1 = height - ((1 - yMin) / yRange) * height;
+            ctx.beginPath();
+            ctx.moveTo(0, y1);
+            ctx.lineTo(width, y1);
+            ctx.stroke();
+        }
 
         if (points.length === 0) return;
 
@@ -73,11 +95,11 @@
         // Draw Line
         ctx.beginPath();
         ctx.strokeStyle = "#38bdf8"; // Sky 400
-        ctx.lineWidth = 1.5 * dpr; // Thin line
+        ctx.lineWidth = 1.5 * dpr;
 
         points.forEach((val, i) => {
             const px = i * xStep;
-            const py = height - val * yScale;
+            const py = height - ((val - yMin) / yRange) * height;
             if (i === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
         });
@@ -87,7 +109,7 @@
         ctx.fillStyle = "#fff";
         points.forEach((val, i) => {
             const px = i * xStep;
-            const py = height - val * yScale;
+            const py = height - ((val - yMin) / yRange) * height;
             ctx.beginPath();
             ctx.arc(px, py, 2.5 * dpr, 0, Math.PI * 2);
             ctx.fill();
@@ -140,8 +162,8 @@
     <!-- Canvas Area (Top) -->
     <div class="canvas-wrapper">
         <!-- Labels -->
-        <span class="axis-label top-label">1.0</span>
-        <span class="axis-label bottom-label">0.0</span>
+        <span class="axis-label top-label">{r < 0 ? "1.5" : "1.0"}</span>
+        <span class="axis-label bottom-label">{r < 0 ? "-0.5" : "0.0"}</span>
 
         <canvas bind:this={canvas}></canvas>
     </div>
